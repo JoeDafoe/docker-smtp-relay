@@ -1,6 +1,7 @@
 name: Build and push Docker image 2 dockerhub
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main" ]
     
