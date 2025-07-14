@@ -13,4 +13,5 @@ jobs:
       run: docker build ./api/ -t JoeDafoe/docker-smtp-relay:latest
     -name: push image to dockerhub
       run:
+          docker login -u ${{ secret.DOCKERHUB_USERNAME }} -p ${{ secret.DOCKERHUB }}
           docker push JoeDafoe/docker-smtp-relay:latest
