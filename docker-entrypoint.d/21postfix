@@ -46,7 +46,7 @@ postconf -e "2bounce_notice_recipient = ${RELAY_POSTMASTER}"
 
 # Update the sender mapping databases
 if [ -f /etc/postfix/sender_canonical ]; then
-  postconf -e "sender_canonical_maps = hash:/etc/postfix/sender_canonical"
+  postconf -e "sender_canonical_maps = lmdb:/etc/postfix/sender_canonical"
   postmap /etc/postfix/sender_canonical
 fi
 
