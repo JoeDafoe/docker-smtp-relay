@@ -5,9 +5,6 @@ FROM alpine:latest
 
 LABEL maintainer='Pierre GINDRAUD <pgindraud@gmail.com>'
 
-# ENV für RSYSLOG_VERSION entfernen, da wir keine spezifische Version mehr benötigen
-# ARG RSYSLOG_VERSION
-
 ENV RELAY_MYDOMAIN=domain.com
 ENV RELAY_MYNETWORKS=127.0.0.0/8
 ENV RELAY_HOST=[127.0.0.1]:25
@@ -17,11 +14,6 @@ ENV RELAY_DOMAINS=\$mydomain
 ENV RELAY_STRICT_SENDER_MYDOMAIN=true
 ENV RELAY_MODE=STRICT
 ENV RELAY_TLS_CA /etc/ssl/certs/ca-certificates.crt
-#ENV RELAY_MYHOSTNAME=relay.domain.com
-#ENV RELAY_POSTMASTER=postmaster@domain.com
-#ENV RELAY_LOGIN=loginname
-#ENV RELAY_PASSWORD=xxxxxxxx
-#ENV RELAY_EXTRAS_SETTINGS
 
 ENV POSTCONF_inet_interfaces all
 ENV POSTCONF_inet_protocols ipv4
@@ -33,10 +25,11 @@ RUN apk update && apk --no-cache add \
       cyrus-sasl-digestmd5 \
       cyrus-sasl-login \
       cyrus-sasl-plain \
-      postfix \
-      rsyslog \
       supervisor \
       tzdata
+
+# Install Postfix and rsyslog separately to isolate errors
+RUN apk --no-cache add postfix rsyslog
 
 # Configuration of main.cf
 RUN postconf -e 'notify_classes = bounce, 2bounce, data, delay, policy, protocol, resource, software' \
