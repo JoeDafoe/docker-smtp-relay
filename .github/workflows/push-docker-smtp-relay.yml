@@ -19,7 +19,7 @@ jobs:
         run: |
           docker login -u $username -p $password 
       - name: build the docker image
-          id: build-docker-image
+        id: build-docker-image
         run: |
           ls -la
           docker build . -f Dockerfile -t JoeDafoe/docker-smtp-relay:latest
