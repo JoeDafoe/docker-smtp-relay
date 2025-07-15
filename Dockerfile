@@ -24,7 +24,6 @@ RUN  apk add --no-cache cyrus-sasl
 RUN  apk add --no-cache cyrus-sasl-crammd5
 RUN  apk add --no-cache cyrus-sasl-digestmd5
 RUN  apk add --no-cache cyrus-sasl-login
-#RUN  apk add --no-cache cyrus-sasl-plain
 RUN  apk add --no-cache cyrus-sasl-ntlm
 RUN  apk add --no-cache postfix
 RUN  apk add --no-cache rsyslog
@@ -34,6 +33,7 @@ RUN  apk add --no-cache tzdata
 # Install Postfix and rsyslog separately to isolate errors
 RUN apk --no-cache add postfix rsyslog
 
+RUN postmap lmdb:/etc/postfix/sender_canonical
 # Configuration of main.cf
 RUN postconf -e 'notify_classes = bounce, 2bounce, data, delay, policy, protocol, resource, software' \
     && postconf -e 'bounce_notice_recipient = $2bounce_notice_recipient' \
@@ -45,6 +45,7 @@ RUN postconf -e 'notify_classes = bounce, 2bounce, data, delay, policy, protocol
     && postconf -e 'smtpd_sasl_local_domain = $mydomain' \
     && postconf -e 'smtpd_sasl_security_options = noanonymous' \
     && postconf -e 'smtpd_banner = $myhostname ESMTP $mail_name RELAY' \
+    && postconf -e 'sender_canonical_maps = lmdb:/etc/postfix/sender_canonical'
     && postconf -e 'smtputf8_enable = no' \
     && mkdir -p /etc/sasl2 \
     && echo 'pwcheck_method: auxprop' >/etc/sasl2/smtpd.conf \
