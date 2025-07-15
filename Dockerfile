@@ -45,7 +45,7 @@ RUN postconf -e 'notify_classes = bounce, 2bounce, data, delay, policy, protocol
     && postconf -e 'smtpd_sasl_local_domain = $mydomain' \
     && postconf -e 'smtpd_sasl_security_options = noanonymous' \
     && postconf -e 'smtpd_banner = $myhostname ESMTP $mail_name RELAY' \
-    && postconf -e 'sender_canonical_maps = lmdb:/etc/postfix/sender_canonical'
+    && postconf -e 'sender_canonical_maps = lmdb:/etc/postfix/sender_canonical' \
     && postconf -e 'smtputf8_enable = no' \
     && mkdir -p /etc/sasl2 \
     && echo 'pwcheck_method: auxprop' >/etc/sasl2/smtpd.conf \
