@@ -33,7 +33,6 @@ RUN  apk add --no-cache tzdata
 # Install Postfix and rsyslog separately to isolate errors
 RUN apk --no-cache add postfix rsyslog
 
-RUN postmap lmdb:/etc/postfix/sender_canonical
 # Configuration of main.cf
 RUN postconf -e 'notify_classes = bounce, 2bounce, data, delay, policy, protocol, resource, software' \
     && postconf -e 'bounce_notice_recipient = $2bounce_notice_recipient' \
