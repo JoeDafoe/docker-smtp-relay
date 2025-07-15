@@ -25,4 +25,4 @@ jobs:
           docker build . -f Dockerfile -t JoeDafoe/docker-smtp-relay:latest
       - name: push the docker image
         id: push-docker-image
-        run: docker push ${{secrets.DOCKERHUB_USERNAME}}/docker-smtp-relay:latest
+        run: docker push ${{secrets.DOCKERHUB_USERNAME}}/docker-smtp-relay
