@@ -1,0 +1,29 @@
+name: Build and push Docker image to dockerhub
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    
+jobs:
+
+build:
+      name: push docker image to docker hub
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+        - name: login to docker hub
+          id: docker-hub
+          env:
+            username: ${{secrets.DOCKERHUB_USERNAME}}
+            password: ${{secrets.DOCKERHUB_TOKEN}}
+          run: |
+            docker login -u $username -p $password 
+        - name: build the docker image
+          id: build-docker-image
+          run: |
+            ls -la 
+            docker build . -f Dockerfile -t JoeDafoe/docker-smtp-relay:latest
+        - name: push the docker image
+          id: push-docker-image
+          run: docker push ${{secrets.DOCKERHUB_USERNAME}}/docker-smtp-relay:latest
