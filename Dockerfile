@@ -21,7 +21,14 @@ ENV POSTCONF_inet_protocols ipv4
 # Install dependencies
 RUN apk update
 RUN  apk add --no-cache cyrus-sasl
-
+RUN  apk add --no-cache cyrus-sasl-crammd5
+RUN  apk add --no-cache cyrus-sasl-digestmd5
+RUN  apk add --no-cache cyrus-sasl-login
+RUN  apk add --no-cache cyrus-sasl-plain
+RUN  apk add --no-cache postfix
+RUN  apk add --no-cache rsyslog=$RSYSLOG_VERSION
+RUN  apk add --no-cache supervisor
+RUN  apk add --no-cache tzdata
 
 # Install Postfix and rsyslog separately to isolate errors
 RUN apk --no-cache add postfix rsyslog
