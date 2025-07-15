@@ -20,6 +20,8 @@ ENV POSTCONF_inet_protocols ipv4
 
 # Install dependencies
 RUN apk update
+RUN  apk add --no-cache cyrus-*
+RUN  apk add --no-cache cyrus-sasl
 RUN  apk add --no-cache cyrus-sasl-crammd5
 RUN  apk add --no-cache cyrus-sasl-digestmd5
 RUN  apk add --no-cache cyrus-sasl-login
