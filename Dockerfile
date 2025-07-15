@@ -1,9 +1,9 @@
 #
 # Final stage for image
 #
-FROM alpine:latest
+FROM alpine:3.12
 
-LABEL maintainer='Pierre GINDRAUD <pgindraud@gmail.com>'
+LABEL maintainer='JoeDafoe'
 
 ENV RELAY_MYDOMAIN=domain.com
 ENV RELAY_MYNETWORKS=127.0.0.0/8
@@ -23,7 +23,7 @@ RUN apk update
 RUN  apk add --no-cache cyrus-sasl-crammd5
 RUN  apk add --no-cache cyrus-sasl-digestmd5
 RUN  apk add --no-cache cyrus-sasl-login
-#RUN  apk add --no-cache cyrus-sasl-plain
+RUN  apk add --no-cache cyrus-sasl-plain
 RUN  apk add --no-cache postfix
 RUN  apk add --no-cache rsyslog
 RUN  apk add --no-cache supervisor
