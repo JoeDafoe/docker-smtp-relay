@@ -1,11 +1,10 @@
 #
 # Final stage for image
 #
-FROM alpine:3.11
+FROM alpine:latest
 
 LABEL maintainer='Pierre GINDRAUD <pgindraud@gmail.com>'
 
-ARG POSTFIX_VERSION
 ARG RSYSLOG_VERSION
 
 ENV RELAY_MYDOMAIN=domain.com
@@ -33,7 +32,7 @@ RUN apk --no-cache add \
       cyrus-sasl-digestmd5 \
       cyrus-sasl-login \
       cyrus-sasl-plain \
-      postfix=$POSTFIX_VERSION \
+      postfix \
       rsyslog=$RSYSLOG_VERSION \
       supervisor \
       tzdata
