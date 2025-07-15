@@ -26,7 +26,7 @@ RUN  apk add --no-cache cyrus-sasl-digestmd5
 RUN  apk add --no-cache cyrus-sasl-login
 #RUN  apk add --no-cache cyrus-sasl-plain
 RUN  apk add --no-cache postfix
-RUN  apk add --no-cache rsyslog=$RSYSLOG_VERSION
+RUN  apk add --no-cache rsyslog
 RUN  apk add --no-cache supervisor
 RUN  apk add --no-cache tzdata
 
