@@ -1,4 +1,4 @@
-name: Build and push Docker image to dockerhub
+name: Build and Push
 
 on:
   workflow_dispatch:
