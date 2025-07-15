@@ -1,7 +1,7 @@
 #
 # Final stage for image
 #
-FROM alpine:3.12
+FROM alpine:latest
 
 LABEL maintainer='JoeDafoe'
 
@@ -23,7 +23,8 @@ RUN apk update
 RUN  apk add --no-cache cyrus-sasl-crammd5
 RUN  apk add --no-cache cyrus-sasl-digestmd5
 RUN  apk add --no-cache cyrus-sasl-login
-RUN  apk add --no-cache cyrus-sasl-plain
+#RUN  apk add --no-cache cyrus-sasl-plain
+RUN  apk add --no-cache cyrus-sasl-ntlm
 RUN  apk add --no-cache postfix
 RUN  apk add --no-cache rsyslog
 RUN  apk add --no-cache supervisor
