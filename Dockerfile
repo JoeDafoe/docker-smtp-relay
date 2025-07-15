@@ -5,7 +5,8 @@ FROM alpine:latest
 
 LABEL maintainer='Pierre GINDRAUD <pgindraud@gmail.com>'
 
-ARG RSYSLOG_VERSION
+# ENV für RSYSLOG_VERSION entfernen, da wir keine spezifische Version mehr benötigen
+# ARG RSYSLOG_VERSION
 
 ENV RELAY_MYDOMAIN=domain.com
 ENV RELAY_MYNETWORKS=127.0.0.0/8
@@ -26,14 +27,14 @@ ENV POSTCONF_inet_interfaces all
 ENV POSTCONF_inet_protocols ipv4
 
 # Install dependencies
-RUN apk --no-cache add \
+RUN apk update && apk --no-cache add \
       cyrus-sasl \
       cyrus-sasl-crammd5 \
       cyrus-sasl-digestmd5 \
       cyrus-sasl-login \
       cyrus-sasl-plain \
       postfix \
-      rsyslog=$RSYSLOG_VERSION \
+      rsyslog \
       supervisor \
       tzdata
 
