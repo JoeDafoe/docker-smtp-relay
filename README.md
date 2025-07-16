@@ -7,7 +7,7 @@ This relay is restricted to only one domain name. so it means that only mail tha
 
 ## Supported tags, image variants and respective Dockerfile links
 
-* main image with postfix [Dockerfile](https://github.com/Turgon37/docker-smtp-relay/blob/master/Dockerfile)
+* main image with postfix [Dockerfile](https://github.com/JoeDafoe/docker-smtp-relay/blob/master/Dockerfile)
 
     * `latest`
 
