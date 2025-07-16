@@ -1,7 +1,7 @@
 #
 # Final stage for image
 #
-FROM alpine:latest
+FROM alpine:3.22.1
 
 LABEL maintainer='JoeDafoe'
 
