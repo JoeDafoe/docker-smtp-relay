@@ -1,12 +1,11 @@
 # Changelog
 
-## 1
+## 1 (2025/07/16)
 
 + Update alpine to 3.22.1
-+ Delete Install cyrus plain
-+ Change
-+ 
-
++ Update Postfix to latest
++ Delete Install cyrus-sasl-plain
++ Change postconf -e "sender_canonical_maps = hash:/etc/postfix/sender_canonical" to postconf -e "sender_canonical_maps = lmdb:/etc/postfix/sender_canonical"
 
 ## 3.2.0 (2020-05-09)
 
