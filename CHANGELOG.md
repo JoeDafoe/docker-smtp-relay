@@ -1,6 +1,6 @@
 # Changelog
 
-## 1 (2025/07/16)
+## 2025/07/16
 
 + Update alpine to 3.22.1
 + Update Postfix to latest
