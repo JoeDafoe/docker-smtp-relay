@@ -9,9 +9,8 @@ This relay is restricted to only one domain name. so it means that only mail tha
 
 * main image with postfix [Dockerfile](https://github.com/JoeDafoe/docker-smtp-relay/blob/master/Dockerfile)
 
-    * `latest`
-
-
+    * Alpine 3.22.1
+  
 ## Example of usage
 
 This relay can take place into a information system if you want to give access to some web or other applications a way to send notification by mail.
