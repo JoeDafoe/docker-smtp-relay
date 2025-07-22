@@ -88,13 +88,13 @@ git clone
 * or Automatic
 
 ```bash
-docker pull turgon37/smtp-relay
+docker pull joedafoe/docker-smtp-relay
 ```
 
 ## Usage
 
 ```bash
-docker run -p 25:25 -e "RELAY_MYDOMAIN=domain.com" -e "RELAY_HOST=relay:25" turgon37/smtp-relay
+docker run -p 25:25 -e "RELAY_MYDOMAIN=domain.com" -e "RELAY_HOST=relay:25" joedafoe/docker-smtp-relay
 ```
 
 ### Docker-compose Specific configuration examples
@@ -104,7 +104,7 @@ docker run -p 25:25 -e "RELAY_MYDOMAIN=domain.com" -e "RELAY_HOST=relay:25" turg
 ```yaml
 services:
   smtp-relay:
-    image: turgon37/smtp-relay:latest
+    image: joedafoe/docker-smtp-relay:latest
     environment:
       RELAY_POSTMASTER: 'postmaster@example.net'
       RELAY_MYHOSTNAME: 'smtp-relay.example.net'
@@ -120,7 +120,7 @@ services:
 ```yaml
 services:
   smtp-relay-auth:
-    image: turgon37/smtp-relay:latest
+    image: joedafoe/docker-smtp-relay:latest
     environment:
       RELAY_POSTMASTER: 'postmaster@example.net'
       RELAY_MYHOSTNAME: 'smtp-relay.example.net'
@@ -152,7 +152,7 @@ Taking again our `authenticated smtp proxy` example above, we would now have:
 ```yaml
 services:
   smtp-relay-auth:
-    image: turgon37/smtp-relay:latest
+    image: joedafoe/docker-smtp-relay:latest
     environment:
       RELAY_POSTMASTER: 'postmaster@example.net'
       RELAY_MYHOSTNAME: 'smtp-relay.example.net'
