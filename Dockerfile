@@ -36,7 +36,7 @@ RUN apk --no-cache add postfix rsyslog
 # Configuration of main.cf
 RUN postconf -e 'notify_classes = bounce, 2bounce, data, delay, policy, protocol, resource, software' \
     && postconf -e 'bounce_notice_recipient = $2bounce_notice_recipient' \
-#    && postconf -e 'message_size_limit = 31457280' \
+    && postconf -e 'message_size_limit = 52428800' \
     && postconf -e 'delay_notice_recipient = $2bounce_notice_recipient' \
     && postconf -e 'error_notice_recipient = $2bounce_notice_recipient' \
     && postconf -e 'myorigin = $mydomain' \
