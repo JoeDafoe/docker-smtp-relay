@@ -1,5 +1,9 @@
 # Changelog
 
+## 2025/10/03
+
++ Change "message_size_limit" from standard 10 MB to 50 MB
+
 ## 2025/07/16
 
 + Update alpine to 3.22.1
