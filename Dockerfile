@@ -1,13 +1,6 @@
-#
-# Final stage for image
-#
 FROM alpine:3.24.4
 
-LABEL maintainer="JoeDafoe"
-
-# ---------------------------------------------------------------------------
-# Environment
-# ---------------------------------------------------------------------------
+LABEL org.opencontainers.image.authors="JoeDafoe"
 
 ENV RELAY_MYDOMAIN=domain.com \
     RELAY_MYNETWORKS=127.0.0.0/8 \
@@ -21,11 +14,8 @@ ENV RELAY_MYDOMAIN=domain.com \
     POSTCONF_inet_interfaces=all \
     POSTCONF_inet_protocols=ipv4
 
-# ---------------------------------------------------------------------------
-# Install dependencies
-# ---------------------------------------------------------------------------
-
 RUN apk add --no-cache \
+        ca-certificates \
         cyrus-sasl \
         cyrus-sasl-crammd5 \
         cyrus-sasl-digestmd5 \
@@ -34,11 +24,8 @@ RUN apk add --no-cache \
         postfix \
         rsyslog \
         supervisor \
-        tzdata
-
-# ---------------------------------------------------------------------------
-# Postfix configuration
-# ---------------------------------------------------------------------------
+        tzdata \
+    && update-ca-certificates
 
 RUN postconf -e 'notify_classes = bounce, 2bounce, data, delay, policy, protocol, resource, software' \
     && postconf -e 'bounce_notice_recipient = $2bounce_notice_recipient' \
@@ -61,28 +48,16 @@ RUN postconf -e 'notify_classes = bounce, 2bounce, data, delay, policy, protocol
         'log_level: 2' \
         > /etc/sasl2/smtpd.conf
 
-# ---------------------------------------------------------------------------
-# Configuration files
-# ---------------------------------------------------------------------------
+COPY root/etc/ /etc/
+COPY root/opt/ /opt/
+COPY docker-entrypoint.d/ /docker-entrypoint.d/
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-COPY /root/etc/* /etc/
-COPY /root/opt/* /opt/
-COPY /docker-entrypoint.sh /
-COPY /docker-entrypoint.d/* /docker-entrypoint.d/
-
-# ---------------------------------------------------------------------------
-# Runtime directories / permissions
-# ---------------------------------------------------------------------------
-
-RUN chmod -R +x /docker-entrypoint.d/ \
-    && chmod +x /docker-entrypoint.sh \
+RUN find /docker-entrypoint.d -type f -name '*.sh' -exec chmod 0755 {} + \
+    && chmod 0755 /usr/local/bin/docker-entrypoint.sh \
     && touch /etc/postfix/aliases \
     && touch /etc/postfix/sender_canonical \
     && mkdir -p /data
-
-# ---------------------------------------------------------------------------
-# Network / volumes
-# ---------------------------------------------------------------------------
 
 EXPOSE 25/tcp
 
@@ -90,20 +65,13 @@ VOLUME ["/data", "/var/spool/postfix"]
 
 WORKDIR /data
 
-# ---------------------------------------------------------------------------
-# Health check
-# ---------------------------------------------------------------------------
-
 HEALTHCHECK \
-    --interval=5s \
-    --timeout=2s \
+    --interval=10s \
+    --timeout=3s \
+    --start-period=10s \
     --retries=3 \
-    CMD nc -znvw 1 127.0.0.1 25 || exit 1
+    CMD nc -z -w 2 127.0.0.1 25 || exit 1
 
-# ---------------------------------------------------------------------------
-# Startup
-# ---------------------------------------------------------------------------
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
-
-CMD ["/usr/bin/supervisord", "--configuration", "/etc/supervisord.conf"]
+CMD ["/usr/bin/supervisord", "--nodaemon", "--configuration", "/etc/supervisord.conf"]
