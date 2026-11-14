@@ -447,220 +447,221 @@ Supervisor loads dynamically generated definitions from:
 
 ### Dynamic DNS Logs
 
-Ch*ck the updater:
+Check the updater:
 
 ```bash
-docker lo*s --since 10m smtp-relay 2>&1 | gr*p dynamic-client
+docker logs --since 10m smtp-relay 2>&1 | grep dynamic-client
 ```
 
 Example:
 
-``*text
-[dynamic-client] Updater star*ed.
-[dynamic-client] DNS name: mai*.example.net
-[dynamic-client] Inte*val: 60s
-[dynamic-client] CIDR map* /data/dynamic-client.cidr
+``text
+[dynamic-client] Updater started.
+[dynamic-client] DNS name: mail.example.net
+[dynamic-client] Interval: 60s
+[dynamic-client] CIDR maps /data/dynamic-client.cidr
 ```
 
-Af*er an IP change:
+After an IP change:
 
 ```text
-[dynamic-client] Client IP updated: mail.ex*mple.net -> 203.0.113.20
+[dynamic-client] Client IP updated: mail.example.net -> 203.0.113.20
 [dynamic-client] Postfix reloaded.
 ```
 
-## I*stallation
+## Installation
 
-* Manual
+ Manual
 
 ```bash
-git *lone https://github.com/JoeDafoe/docker-smtp-relay.git
-cd docker-smtp*relay
+git clone https://github.com/JoeDafoe/docker-smtp-relay.git
+cd docker-smtp-relay
 ./build.sh
 ```
 
-Alternativel*:
+Alternativel:
 
 ```bash
-docker build -t joedafo*/docker-smtp-relay:latest .
+docker build -t joedafoe/docker-smtp-relay:latest .
 ```
 
-**Automatic
+Automatic
 
 ```bash
-docker pull joe*afoe/docker-smtp-relay:latest
+docker pull joedafoe/docker-smtp-relay:latest
 ```
-*## Usage
+## Usage
 
 Basic example:
 
 ```bash
-*ocker run \
+docker run \
   --name smtp-relay \
-* -d \
+ -d \
   --restart=always \
-  -p 25*25 \
-  -e "RELAY_MYDOMAIN=domain.c*m" \
+  -p 25:25 \
+  -e "RELAY_MYDOMAIN=domain.com" \
   -e "RELAY_HOST=relay:25" \
-* joedafoe/docker-smtp-relay:latest*```
+ joedafoe/docker-smtp-relay:latest```
 
-### Dynamic DNS protected Int*rnet relay
+### Dynamic DNS protected Internet relay
 
-Example for an authent*cated mail server with a dynamic p*blic IP:
+Example for an authenticated mail server with a dynamic public IP:
 
 ```bash
 docker run \
-  -*name mailrelay \
+  -name mailrelay \
   -d \
-  --restar*=always \
+  --restart=always \
   -p 587:25 \
-  -v /Dock*rConfigs/mailrelay/data:/data \
-  *v /DockerConfigs/mailrelay/postfix*/var/spool/postfix \
-  -v /DockerC*nfigs/mailrelay/scripts:/external-*cripts:ro \
-  -e "RELAY_POSTMASTER*administrator@example.net" \
-  -e *RELAY_MYHOSTNAME=relay.example.net* \
-  -e "RELAY_MYDOMAIN=example.ne*" \
-  -e "RELAY_HOST=upstream-rela*.example.net:25" \
-  -e "RELAY_MYN*TWORKS=127.0.0.0/8" \
-  -e "RELAY_*ODE=ALLOW_SASLAUTH_NODOMAIN" \
-  -* "RELAY_USE_TLS=yes" \
-  -e "RELAY*EXTERNAL_SCRIPT=/external-scripts/*ynamic-client.sh" \
-  -e "RELAY_DY*AMIC_CLIENT=mail.example.net" \
-  *e "RELAY_DYNAMIC_CLIENT_INTERVAL=6*" \
-  -e "RELAY_DYNAMIC_CLIENT_MAP*/data/dynamic-client.cidr" \
-  -e *POSTCONF_compatibility_level=3.6" *
-  -e "POSTCONF_smtp_tls_security_*evel=encrypt" \
-  joedafoe/docker-*mtp-relay:latest
+  -v /DockerConfigs/mailrelay/data:/data \
+  -v /DockerConfigs/mailrelay/postfix/var/spool/postfix \
+  -v /DockerConfigs/mailrelay/scripts:/external-scripts:ro \
+  -e "RELAY_POSTMASTER=administrator@example.net" \
+  -e "RELAY_MYHOSTNAME=relay.example.net" \
+  -e "RELAY_MYDOMAIN=example.net" \
+  -e "RELAY_HOST=upstream-relax.example.net:25" \
+  -e "RELAY_MYNETWORKS=127.0.0.0/8" \
+  -e "RELAY_MODE=ALLOW_SASLAUTH_NODOMAIN" \
+  -e "RELAY_USE_TLS=yes" \
+  -e "RELAY_EXTERNAL_SCRIPT=/external-scripts/dynamic-client.sh" \
+  -e "RELAY_DYNAMIC_CLIENT=mail.example.net" \
+  -e "RELAY_DYNAMIC_CLIENT_INTERVAL=60" \
+  -e "RELAY_DYNAMIC_CLIENT_MAPS/data/dynamic-client.cidr" \
+  -e "POSTCONF_compatibility_level=3.6" \
+  -e "POSTCONF_smtp_tls_security_level=encrypt" \
+  joedafoe/docker-smtp-relay:latest
 ```
 
-### Docker-c*mpose Specific configuration examp*es
+### Docker-compose Specific configuration examples
 
-* unauthenticated SMTP relay f*ltered by subnet and domain name
+ unauthenticated SMTP relay filtered by subnet and domain name
 
-*``yaml
+``yaml
 services:
   smtp-relay:
-   *image: joedafoe/docker-smtp-relay:*atest
+   image: joedafoe/docker-smtp-relay:latest
     environment:
-      RELAY*POSTMASTER: 'postmaster@example.ne*'
-      RELAY_MYHOSTNAME: 'smtp-re*ay.example.net'
-      RELAY_MYDOMA*N: 'example.net'
-      RELAY_MYNET*ORKS: '127.0.0.0/8 10.0.0.0/24'
-  *   RELAY_HOST: '[10.1.0.1]:25'
-   *ports:
+      RELAY_POSTMASTER: 'postmaster@example.net'
+      RELAY_MYHOSTNAME: 'smtp-relay.example.net'
+      RELAY_MYDOMAIN: 'example.net'
+      RELAY_MYNETWORKS: '127.0.0.0/8 10.0.0.0/24'
+     RELAY_HOST: '[10.1.0.1]:25'
+   ports:
       - "10.0.0.1:3000:25"
-*``
+``
 
-* authenticated SMTP proxy
+ authenticated SMTP proxy
 
-``*yaml
+``yaml
 services:
   smtp-relay-auth:
-*   image: joedafoe/docker-smtp-rel*y:latest
+   image: joedafoe/docker-smtp-relay:latest
     environment:
-      RE*AY_POSTMASTER: 'postmaster@example*net'
-      RELAY_MYHOSTNAME: 'smtp*relay.example.net'
-      RELAY_MYD*MAIN: 'example.net'
-      RELAY_MY*ETWORKS: '127.0.0.0/8 10.0.0.0/24'*      RELAY_HOST: '[10.1.0.1]:25'
-*     RELAY_MODE: 'ALLOW_SASLAUTH_N*DOMAIN'
-      RELAY_LOGIN: 'sasl-u*er-login'
-      RELAY_PASSWORD: 'x*xxxxxxxxxx'
-      RELAY_USE_TLS: '*o'
-      POSTCONF_compatibility_le*el: '3.6'
+      RELAY_POSTMASTER: 'postmaster@example.net'
+      RELAY_MYHOSTNAME: 'smtp.relay.example.net'
+      RELAY_MYDOMAIN: 'example.net'
+      RELAY_MYNETWORKS: '127.0.0.0/8 10.0.0.0/24'
+      RELAY_HOST: '[10.1.0.1]:25'
+      RELAY_MODE: 'ALLOW_SASLAUTH_NODOMAIN'
+      RELAY_LOGIN: 'sasl-user-login'
+      RELAY_PASSWORD: 'xxxxxxxxxxxx'
+      RELAY_USE_TLS: 'no'
+      POSTCONF_compatibility_level: '3.6'
     ports:
-      - "10.0*0.1:3000:25"
+      - "10.0.0.1:3000:25"
     volumes:
-      - *ata-smtp-relay-auth:/data
-      - *ata-smtp-relay-queue:/var/spool/po*tfix
+      - data-smtp-relay-auth:/data
+      - data-smtp-relay-queue:/var/spool/postfix
 
 volumes:
-  data-smtp-relay-a*th:
+  data-smtp-relay-auth:
   data-smtp-relay-queue:
 ```
 
-*## Using external relay credential*
+## Using external relay credential
 
-If you want to prevent having yo*r upstream relay credentials in yo*r `docker-compose.yml`, mount them*instead of setting `RELAY_LOGIN` a*d `RELAY_PASSWORD`.
+If you want to prevent having your upstream relay credentials in your `docker-compose.yml`, mount them instead of setting `RELAY_LOGIN` and `RELAY_PASSWORD`.
 
-Mount the cre*entials file to:
+Mount the credentials file to:
 
 ```text
-/etc/pos*fix/sasl_passwd
+/etc/postfix/sasl_passwd
 ```
 
 Example:
 
-```*aml
+```yaml
 services:
   smtp-relay-auth:
- *  image: joedafoe/docker-smtp-rela*:latest
+   image: joedafoe/docker-smtp-relay:latest
     environment:
-      REL*Y_POSTMASTER: 'postmaster@example.*et'
-      RELAY_MYHOSTNAME: 'smtp-*elay.example.net'
-      RELAY_MYDO*AIN: 'example.net'
-      RELAY_MYN*TWORKS: '127.0.0.0/8 10.0.0.0/24'
-*     RELAY_HOST: '[10.1.0.1]:25'
- *    RELAY_MODE: 'ALLOW_SASLAUTH_NO*OMAIN'
+      RELAY_POSTMASTER: 'postmaster@example.net'
+      RELAY_MYHOSTNAME: 'smtp-relay.example.net'
+      RELAY_MYDOMAIN: 'example.net'
+      RELAY_MYNETWORKS: '127.0.0.0/8 10.0.0.0/24'
+      RELAY_HOST: '[10.1.0.1]:25'
+      RELAY_MODE: 'ALLOW_SASLAUTH_NODOMAIN'
       RELAY_USE_TLS: 'no'
- *    POSTCONF_compatibility_level: *3.6'
+      POSTCONF_compatibility_level: 3.6'
     ports:
-      - "10.0.0.1:*000:25"
+      - "10.0.0.1:0000:25"
     volumes:
-      - data-*mtp-relay-auth:/data
-      - "/my/*ocal/path/sasl_passwd:/etc/postfix*sasl_passwd:ro"
+      - data-smtp-relay-auth:/data
+      - "/my/local/path/sasl_passwd:/etc/postfix_sasl_passwd:ro"
 
 volumes:
-  data-s*tp-relay-auth:
+  data-smtp-relay-auth:
 ```
 
-Example conten*s:
+Example contents:
 
 ```text
-[10.1.0.1]:25 sasl-use*-login:xxxxxxxxxxxx
+[10.1.0.1]:25 sasl-user-login:xxxxxxxxxxxx
 ```
 
-## Config*ration during runtime
+## Configuration during runtime
 
-* List all *ASL users:
+ List all SASL users:
 
 ```bash
-docker exec sm*p-relay /opt/listpasswd.sh
+docker exec smtp-relay /opt/listpasswd.sh
 ```
 
-* *dd a SASL user:
+ add a SASL user:
 
 ```bash
-docker ex*c -it smtp-relay \
-  /opt/saslpass*d.sh \
+docker exec -it smtp-relay \
+  /opt/saslpassword.sh \
   -u domain.com \
-  -c user*ame
+  -c username
 ```
 
-Replace `domain.com` with*your relay domain.
+Replace `domain.com` with your relay domain.
 
-You will be pr*mpted for the password.
+You will be prompted for the password.
 
-* Add mul*iple SASL users:
+Add multiple SASL users:
 
-Mount a credenti*ls list to:
+Mount a credentials list to:
 
 ```text
-/etc/postfix/*lient_sasl_passwd
+/etc/postfix/client_sasl_passwd
 ```
 
-Each line u*es:
+Each line uses:
 
 ```text
 USERNAME PASSWORD
-```*
+```
 Example:
 
 ```text
-application1 Pa*swordExample1
-application2 Passwor*Example2
+application1 PasswordExample1
+application2 PasswordExample2
 ```
 
-Check the Docker log* to ensure all entries were regist*red successfully.
+Check the Docker logs to ensure all entries were registered successfully.
 
 ## Incoming STARTTLS
 
@@ -675,7 +676,7 @@ smtpd_tls_cert_file = /cert/fullchain.pem
 smtpd_tls_key_file = /cert/privkey.pem
 ```
 
-These can be configured using `POSTCONF_*`:
+These can be configured using `POSTCONF_`:
 
 ```bash
 -e "POSTCONF_smtpd_tls_security_level=may"
