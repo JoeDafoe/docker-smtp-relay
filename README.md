@@ -121,13 +121,13 @@ Any available Postfix setting can be configured using an environment variable pr
 For example:
 
 ```bash
--e "POSTCONF_compatibility_level=3.6"
+-e "POSTCONF_compatibility_level=3.11"
 ```
 
 results in:
 
 ```text
-compatibility_level = 3.6
+compatibility_level = 3.11
 ```
 
 To require TLS when sending to the upstream SMTP relay:
@@ -603,7 +603,7 @@ services:
       RELAY_HOST: '[10.1.0.1]:25'
       RELAY_MODE: 'ALLOW_SASLAUTH_NODOMAIN'
       RELAY_USE_TLS: 'no'
-      POSTCONF_compatibility_level: 3.6'
+      POSTCONF_compatibility_level: 3.11'
     ports:
       - "10.0.0.1:0000:25"
     volumes:
