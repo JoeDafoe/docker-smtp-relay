@@ -14,8 +14,8 @@ ENV RELAY_MYDOMAIN=domain.com \
     POSTCONF_inet_interfaces=all \
     POSTCONF_inet_protocols=ipv4
 
-RUN apk add ---no-cache \
-        ca-certificates\
+RUN apk add --no-cache \
+        ca-certificates \
         cyrus-sasl \
         cyrus-sasl-crammd5 \
         cyrus-sasl-digestmd5 \
