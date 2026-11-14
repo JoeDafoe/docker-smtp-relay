@@ -14,8 +14,8 @@ ENV RELAY_MYDOMAIN=domain.com \
     POSTCONF_inet_interfaces=all \
     POSTCONF_inet_protocols=ipv4
 
-RUN apk add --no-cache \
-        ca-certificates \
+RUN apk add ---no-cache \
+        ca-certificates\
         cyrus-sasl \
         cyrus-sasl-crammd5 \
         cyrus-sasl-digestmd5 \
@@ -57,7 +57,9 @@ RUN find /docker-entrypoint.d -type f -name '*.sh' -exec chmod 0755 {} + \
     && chmod 0755 /usr/local/bin/docker-entrypoint.sh \
     && touch /etc/postfix/aliases \
     && touch /etc/postfix/sender_canonical \
-    && mkdir -p /data
+    && mkdir -p /data \
+    && mkdir -p /etc/supervisor.d \
+    && mkdir -p /external-scripts
 
 EXPOSE 25/tcp
 
