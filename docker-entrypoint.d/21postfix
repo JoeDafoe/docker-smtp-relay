@@ -116,3 +116,102 @@ if [ -f /etc/postfix/client_sasl_passwd ]; then
     echo "...registered user '${user}' into sasl database"
   done < /etc/postfix/client_sasl_passwd
 fi
+
+# ---------------------------------------------------------------------------
+# Optional external dynamic client script
+# ---------------------------------------------------------------------------
+
+if [ -n "${RELAY_EXTERNAL_SCRIPT:-}" ]; then
+  DYNAMIC_MAP="${RELAY_DYNAMIC_CLIENT_MAP:-/data/dynamic-client.cidr}"
+  SUPERVISOR_DIR="/etc/supervisor.d"
+  SUPERVISOR_FILE="${SUPERVISOR_DIR}/external-relay-script.ini"
+
+  echo "Dynamic client functionality enabled"
+  echo "...external script: ${RELAY_EXTERNAL_SCRIPT}"
+  echo "...dynamic client map: ${DYNAMIC_MAP}"
+
+  # External scripts must be mounted below /external-scripts
+  case "${RELAY_EXTERNAL_SCRIPT}" in
+    /external-scripts/*)
+      ;;
+    *)
+      echo "RELAY_EXTERNAL_SCRIPT must point below /external-scripts" >&2
+      exit 1
+      ;;
+  esac
+
+  # Check external script
+  if [ ! -f "${RELAY_EXTERNAL_SCRIPT}" ]; then
+    echo "External script does not exist: ${RELAY_EXTERNAL_SCRIPT}" >&2
+    exit 1
+  fi
+
+  if [ ! -r "${RELAY_EXTERNAL_SCRIPT}" ]; then
+    echo "External script is not readable: ${RELAY_EXTERNAL_SCRIPT}" >&2
+    exit 1
+  fi
+
+  if [ ! -x "${RELAY_EXTERNAL_SCRIPT}" ]; then
+    echo "External script is not executable: ${RELAY_EXTERNAL_SCRIPT}" >&2
+    exit 1
+  fi
+
+  # Dynamic map must be located in the persistent /data volume
+  case "${DYNAMIC_MAP}" in
+    /data/*)
+      ;;
+    *)
+      echo "RELAY_DYNAMIC_CLIENT_MAP must point below /data" >&2
+      exit 1
+      ;;
+  esac
+
+  # Initialize the external script before Postfix starts.
+  # This must create the initial CIDR map.
+  echo "...initializing dynamic client map"
+
+  if ! "${RELAY_EXTERNAL_SCRIPT}" --init; then
+    echo "Dynamic client initialization failed" >&2
+    exit 1
+  fi
+
+  # Make sure the script created a map.
+  if [ ! -s "${DYNAMIC_MAP}" ]; then
+    echo "Dynamic client map was not created: ${DYNAMIC_MAP}" >&2
+    exit 1
+  fi
+
+  # Make sure the map contains at least one allowed IPv4 /32 address.
+  if ! grep -Eq \
+    '^[0-9]{1,3}(\.[0-9]{1,3}){3}/32[[:space:]]+OK$' \
+    "${DYNAMIC_MAP}"; then
+    echo "Dynamic client map contains no valid IPv4 /32 OK entry" >&2
+    exit 1
+  fi
+
+  # Activate the CIDR client restriction in Postfix.
+  postconf -e \
+    "smtpd_client_restrictions = check_client_access cidr:${DYNAMIC_MAP}"
+
+  # Create Supervisor configuration for the permanent update loop.
+  mkdir -p "${SUPERVISOR_DIR}"
+
+  cat > "${SUPERVISOR_FILE}" <<EOF
+[program:external-relay-script]
+command=${RELAY_EXTERNAL_SCRIPT} --loop
+priority=20
+autostart=true
+autorestart=true
+startsecs=2
+startretries=5
+stopsignal=TERM
+stopwaitsecs=10
+redirect_stderr=true
+stdout_logfile=/dev/fd/1
+stdout_logfile_maxbytes=0
+EOF
+
+  echo "...dynamic client functionality configured"
+else
+  echo "Dynamic client functionality disabled"
+fi
