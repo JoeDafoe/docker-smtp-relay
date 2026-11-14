@@ -61,12 +61,16 @@ resolve_ipv4()
 acquire_lock()
 {
     if mkdir "$LOCK_DIR" 2>/dev/null; then
-        trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT INT TERM
         return 0
     fi
 
     log "WARNING: Another update operation is already running."
     return 1
+}
+
+release_lock()
+{
+    rmdir "$LOCK_DIR" 2>/dev/null || true
 }
 
 update_map()
@@ -135,12 +139,33 @@ update_map()
 
 run_once()
 {
-    acquire_lock || return 1
+    if ! acquire_lock; then
+        return 1
+    fi
+
+    # Always release the lock when the current operation is interrupted.
+    trap 'release_lock; exit 1' INT TERM HUP
+
     update_map
+    RESULT=$?
+
+    # IMPORTANT:
+    # Release the lock after every single update operation.
+    # Do not wait for the complete --loop process to exit.
+    release_lock
+
+    # Remove signal handlers for the completed operation.
+    trap - INT TERM HUP
+
+    return "$RESULT"
 }
 
 run_loop()
 {
+    # Remove a possible stale lock left behind by a crashed or
+    # previously terminated updater process.
+    rm -rf "$LOCK_DIR"
+
     log "Updater started."
     log "DNS name: $DNS_NAME"
     log "Interval: ${INTERVAL}s"
