@@ -1,767 +1,817 @@
-Docker SMTP Relay
-A lightweight Postfix SMTP relay running in Docker and based on Alpine Linux.
+# Docker SMTP Relay
 
-The image provides a configurable SMTP relay for applications, servers, Microsoft Exchange environments, monitoring systems, and other SMTP clients that need to forward email through an upstream mail relay.
+This image contains an instance of Postfix SMTP server configured as a SMTP relay.
 
-Clients can be authorized by:
+This relay can be restricted by domain name, trusted networks, SASL authentication and optionally by a dynamically resolved client IP address.
 
-Trusted networks (RELAY_MYNETWORKS)
-SASL username/password authentication
-Optional Dynamic DNS based client IP filtering
-A combination of IP filtering and SASL authentication
-Messages forwarded to an upstream SMTP relay can be protected using TLS.
+This makes the image suitable for applications, servers and mail systems such as Microsoft Exchange that need to send emails through an upstream SMTP relay.
 
-Security: Do not expose an unrestricted SMTP relay to the Internet.
-For Internet-facing deployments, SASL authentication, restrictive client access rules, and TLS are strongly recommended.
+:warning: Take care of the [changelogs](CHANGELOG.md) because some breaking changes may happen between versions.
 
-Important: Review CHANGELOG.md before upgrading because new releases may introduce configuration changes.
+:warning: If this relay is exposed to the Internet, do not use `RELAY_MYNETWORKS=0.0.0.0/0` unless you fully understand the resulting Postfix relay permissions. SASL authentication and restrictive client access rules are strongly recommended.
 
-Features
-Postfix SMTP relay
-Alpine Linux based image
-IPv4 support
-Cyrus SASL authentication
-Persistent SASL user database
-Persistent Postfix mail queue
-Sender-domain restrictions
-Multiple predefined relay modes
-Upstream SMTP smart-host support
-TLS support for upstream SMTP connections
-Generic Postfix configuration through POSTCONF_*
-Docker health check
-Supervisor based process management
-Optional external script support
-Dynamic DNS client IP allowlisting
-Automatic Postfix reload after Dynamic DNS IP changes
-Persistent last-known Dynamic DNS client IP
-Supported Image
-Docker image:
+## Supported tags, image variants and respective Dockerfile links
 
-joedafoe/docker-smtp-relay:latest
-Source:
+* Main image with Postfix [Dockerfile](https://github.com/JoeDafoe/docker-smtp-relay/blob/master/Dockerfile)
 
-GitHub Repository
+    * Alpine 3.24.4
+    * Postfix
+    * Cyrus SASL
+    * Supervisor
+    * rsyslog
 
-Dockerfile
+## Features
 
-Current base image:
+* Postfix SMTP relay
+* Cyrus SASL authentication
+* Persistent SASL database
+* Persistent Postfix mail queue
+* Sender domain restrictions
+* Multiple relay authorization modes
+* Upstream smart host support
+* TLS support for the upstream SMTP relay
+* Generic Postfix configuration through `POSTCONF_*`
+* Docker health check
+* Supervisor process management
+* Optional external script support
+* Optional Dynamic DNS based client IP filtering
+* Automatic Postfix reload when the Dynamic DNS client IP changes
+* Persistent last known Dynamic DNS client IP
 
-Alpine 3.24.4
-Architecture
-Typical deployment:
+## Example of usage
 
-SMTP Client / Exchange
-          |
-          | SMTP
-          | optional SASL authentication
-          |
-          v
-+-------------------------------+
-| Docker SMTP Relay             |
-|                               |
-| Postfix                       |
-| Cyrus SASL                    |
-| Dynamic Client IP Filtering   |
-| Supervisor                    |
-+-------------------------------+
-          |
-          | SMTP
-          | TLS optional/required
-          |
-          v
-   Upstream SMTP Relay
-Example with Docker port mapping:
+This relay can take place into an information system if you want to give access to web applications, servers, Microsoft Exchange or other applications that need a way to send notification emails.
 
-Exchange
-   |
-   | TCP/587
-   v
-Docker Host :587
-   |
-   | Docker NAT
-   v
-Container :25
-   |
-   | STARTTLS
-   v
-Upstream SMTP Relay :25
-Postfix itself continues to listen on TCP/25 inside the container. Docker can publish this as another port such as TCP/587.
+Clients can be authorized in different ways:
 
-Docker Information
-Port
-Port	Usage
-25/tcp	Incoming SMTP relay connections
-Example:
+* The host IP address is in the range of `RELAY_MYNETWORKS`
+* The host is authenticated with a valid SASL login/password
+* The host IP address matches an optional Dynamic DNS client rule
+* A combination of Dynamic DNS client filtering and SASL authentication
 
--p 587:25
-Clients connect to:
+For Internet-facing SMTP relays, using both IP filtering and SASL authentication provides an additional layer of protection.
 
-relay.example.net:587
-while Postfix listens on:
+## Docker Informations
 
-container:25
-Persistent Volumes
-Volume	Usage
-/data	Persistent SASL database and Dynamic DNS CIDR map
-/var/spool/postfix	Persistent Postfix mail queue
-/external-scripts	Optional externally managed scripts, normally mounted read-only
-Example:
+* This port is available on this image
 
--v /DockerConfigs/mailrelay/data:/data
--v /DockerConfigs/mailrelay/postfix:/var/spool/postfix
--v /DockerConfigs/mailrelay/scripts:/external-scripts:ro
-Environment Variables
-Basic Configuration
-Environment	Type	Description
-RELAY_MYHOSTNAME	String	Hostname presented by the SMTP relay
-RELAY_MYDOMAIN	String	Primary mail domain
-RELAY_MYNETWORKS	List	Networks trusted by Postfix
-RELAY_DOMAINS	List	Domains handled by the relay
-RELAY_HOST	String	Upstream SMTP smart host
-RELAY_POSTMASTER	Email	Address receiving Postfix error notifications
-RELAY_MODE	Enum	Relay authorization mode
-RELAY_STRICT_SENDER_MYDOMAIN	Boolean	Restrict envelope sender addresses to RELAY_MYDOMAIN
-RELAY_LOGIN	String	Optional username for authentication against the upstream relay
-RELAY_PASSWORD	String	Optional password for authentication against the upstream relay
-RELAY_USE_TLS	Boolean	Enable TLS support for the upstream relay
-RELAY_TLS_VERIFY	Enum	TLS security level
-RELAY_TLS_CA	Path	CA bundle used for TLS validation
-RELAY_EXTRAS_SETTINGS	String	Deprecated. Additional settings passed to postconf -e
-POSTCONF_[setting]	Mixed	Set arbitrary Postfix configuration parameters
-Default trusted network:
+| Port | Usage |
+| ---- | ----- |
+| 25 | SMTP for incoming relay user |
 
-127.0.0.0/8
-For Internet-facing deployments it is strongly recommended not to use:
+The container port can be mapped to another host port.
 
-0.0.0.0/0
-as a general trusted network.
-
-Generic Postfix Configuration with POSTCONF_
-Postfix settings can be supplied directly using environment variables prefixed with:
-
-POSTCONF_
 For example:
 
+```bash
+-p 587:25
+```
+
+Postfix will continue listening on port `25` inside the container while clients connect to port `587` on the Docker host.
+
+* These volumes can be used with this image
+
+| Volume | Usage |
+| ------ | ----- |
+| `/data` | Contains the SASL database and optional Dynamic DNS CIDR map |
+| `/var/spool/postfix` | Where Postfix stores the mail queue to persist messages across container restarts |
+| `/external-scripts` | Optional external scripts. Recommended to mount read-only |
+
+* This image takes these environment variables as parameters
+
+| Environment | Type | Usage |
+| ----------- | ---- | ----- |
+| `RELAY_MYHOSTNAME` | String | The hostname of the SMTP relay. Docker assigns a random hostname by default, so you can specify a human-readable hostname |
+| `RELAY_MYDOMAIN` | String | The domain name that this relay will forward mail for |
+| `RELAY_MYNETWORKS` | List of strings | Space separated list of trusted networks |
+| `RELAY_DOMAINS` | List of strings | Space separated list of external domain names for which the relay will forward email. Useless when using a `*NODOMAIN` relay mode. Defaults to `RELAY_MYDOMAIN` |
+| `RELAY_HOST` | String | The remote host to which relayed emails are sent |
+| `RELAY_LOGIN` | String | Login name presented to the upstream relay during authentication |
+| `RELAY_PASSWORD` | String | Password presented to the upstream relay during authentication |
+| `RELAY_USE_TLS` | Boolean (`yes/no`) | Enable TLS for the connection to the upstream relay |
+| `RELAY_TLS_VERIFY` | Enum | TLS security level: `none`, `may`, `encrypt`, `dane`, `dane-only`, `fingerprint`, `verify`, `secure` |
+| `RELAY_TLS_CA` | String path | CA file used to check relayhost certificates. Default: `/etc/ssl/certs/ca-certificates.crt` |
+| `RELAY_POSTMASTER` | Email address | Postmaster address used for Postfix errors and configuration notifications |
+| `RELAY_STRICT_SENDER_MYDOMAIN` | Boolean (`true/false`) | If set to `true`, sender addresses must belong to the relay domain |
+| `RELAY_MODE` | Enum | Predefined relay behaviour. See below |
+| `RELAY_EXTRAS_SETTINGS` | List of strings | Deprecated. Use `POSTCONF_` instead |
+| `POSTCONF_[custom]` | Mixed | Set any available Postfix `postconf` parameter |
+| `RELAY_EXTERNAL_SCRIPT` | String path | Optional external script. Empty or unset disables this feature |
+| `RELAY_DYNAMIC_CLIENT` | DNS hostname | Dynamic DNS hostname representing an authorized SMTP client |
+| `RELAY_DYNAMIC_CLIENT_INTERVAL` | Integer | DNS update interval in seconds. Example: `60` |
+| `RELAY_DYNAMIC_CLIENT_MAP` | String path | Persistent CIDR map. Default: `/data/dynamic-client.cidr` |
+
+### Relay Mode
+
+Description of available relay modes.
+
+| Relay mode value | Description | Usage |
+| ---------------- | ----------- | ----- |
+| `STRICT` | Only network and SASL authenticated users can send email through the relay. All emails must have a recipient address that belongs to the relay domains | Typically used when applications may only send to internal domains |
+| `ALLOW_SASLAUTH_NODOMAIN` | SASL authenticated users may send to external domains. Network authenticated users remain restricted to the relay domains | Recommended when authenticated applications or Microsoft Exchange need to send to external recipients |
+| `ALLOW_NETAUTH_NODOMAIN` | Network authenticated users may send to external domains. SASL authenticated users remain restricted to the relay domains | Useful when trusted internal networks must relay externally |
+| `ALLOW_AUTH_NODOMAIN` | Network and SASL authenticated users may send to arbitrary recipients | Simple unrestricted relay for authenticated clients. Use with care |
+
+For other examples of values, refer to the Dockerfile.
+
+## Postfix configuration using POSTCONF_
+
+Any available Postfix setting can be configured using an environment variable prefixed with `POSTCONF_`.
+
+For example:
+
+```bash
 -e "POSTCONF_compatibility_level=3.6"
+```
+
 results in:
 
+```text
 compatibility_level = 3.6
-Another example:
+```
 
+To require TLS when sending to the upstream SMTP relay:
+
+```bash
 -e "POSTCONF_smtp_tls_security_level=encrypt"
-results in:
+```
 
-smtp_tls_security_level = encrypt
-The effective configuration can be inspected with:
-
-docker exec smtp-relay postconf -n
-or for a specific setting:
-
-docker exec smtp-relay postconf smtp_tls_security_level
-Relay Modes
-STRICT
-RELAY_MODE=STRICT
-Only network-authorized or SASL-authenticated clients are allowed to use the relay.
-
-Recipients are restricted to the configured relay domains.
-
-ALLOW_SASLAUTH_NODOMAIN
-RELAY_MODE=ALLOW_SASLAUTH_NODOMAIN
-SASL-authenticated clients can relay messages to arbitrary recipient domains.
-
-Network-authorized clients remain subject to the configured relay-domain restrictions.
-
-This mode is useful when an authenticated server such as Microsoft Exchange needs to send mail to external users.
-
-ALLOW_NETAUTH_NODOMAIN
-RELAY_MODE=ALLOW_NETAUTH_NODOMAIN
-Network-authorized clients can relay to arbitrary recipient domains.
-
-SASL-authenticated clients remain subject to relay-domain restrictions.
-
-ALLOW_AUTH_NODOMAIN
-RELAY_MODE=ALLOW_AUTH_NODOMAIN
-Network-authorized and SASL-authenticated clients can relay to arbitrary recipient domains.
-
-Use this mode carefully on Internet-facing systems.
-
-SASL Authentication
-Incoming SMTP clients can authenticate using Cyrus SASL.
-
-The SASL database is stored persistently under:
-
-/data/sasldb2
-The image currently supports:
-
-PLAIN
-LOGIN
-CRAM-MD5
-DIGEST-MD5
-For Internet-facing deployments, PLAIN and LOGIN should only be used together with TLS.
-
-List SASL Users
-docker exec smtp-relay /opt/listpasswd.sh
-Add a SASL User
-docker exec -it smtp-relay \
-  /opt/saslpasswd.sh \
-  -u domain.com \
-  -c username
-The password is requested interactively.
-
-Add Multiple SASL Users
-A credentials file can be mounted to:
-
-/etc/postfix/client_sasl_passwd
-with one account per line:
-
-username1 password1
-username2 password2
-The accounts are registered during container startup.
-
-Check the Docker logs to verify that all users have been processed successfully.
-
-Authentication Against the Upstream SMTP Relay
-If the upstream SMTP relay requires authentication:
-
--e "RELAY_LOGIN=username"
--e "RELAY_PASSWORD=password"
-Alternatively, credentials can be mounted using:
-
-/etc/postfix/sasl_passwd
-Example:
-
-[relay.example.net]:25 username:password
-Mount:
-
--v /local/path/sasl_passwd:/etc/postfix/sasl_passwd:ro
-TLS to the Upstream SMTP Relay
-Postfix can encrypt SMTP connections from the container to the upstream relay.
-
-For a trusted upstream smart host where TLS should be mandatory:
-
--e "POSTCONF_smtp_tls_security_level=encrypt"
 This results in:
 
+```text
 smtp_tls_security_level = encrypt
-With encrypt, Postfix requires TLS before delivering the message to the upstream SMTP server.
+```
 
-If the upstream server does not provide STARTTLS, the message is not sent in clear text.
+The effective Postfix configuration can be checked with:
 
-Useful TLS security levels include:
+```bash
+docker exec smtp-relay postconf -n
+```
 
-none
-may
-encrypt
-dane
-dane-only
-fingerprint
-verify
-secure
-Check the active setting:
+A specific setting can be checked using:
 
-docker exec smtp-relay \
-  postconf smtp_tls_security_level
-A successful TLS protected delivery is visible in the Postfix logs:
+```bash
+docker exec smtp-relay postconf smtp_tls_security_level
+```
 
+## TLS to the upstream relay
+
+TLS can be enabled for the connection between this relay and the upstream SMTP server.
+
+For a known upstream smart host that supports STARTTLS, TLS can be required with:
+
+```bash
+-e "RELAY_USE_TLS=yes"
+-e "POSTCONF_smtp_tls_security_level=encrypt"
+```
+
+With:
+
+```text
+smtp_tls_security_level = encrypt
+```
+
+Postfix will not send the message to the upstream server without TLS.
+
+A successful TLS delivery can be verified in the logs:
+
+```text
 tls=encrypt
 dsn=2.0.0
 status=sent
-Dynamic DNS Client Allowlisting
+```
+
+For example:
+
+```bash
+docker logs --since 5m smtp-relay 2>&1 | grep 'postfix/smtp'
+```
+
+## Dynamic DNS Client Filtering
+
 The image supports optional Dynamic DNS based SMTP client filtering.
 
-This is useful when an SMTP client, such as a Microsoft Exchange server, connects through the Internet but has a dynamically assigned public IPv4 address.
+This is useful when a server such as Microsoft Exchange connects to the SMTP relay over the Internet but has a dynamically assigned public IPv4 address.
+
+Instead of trusting every IPv4 address with:
+
+```text
+RELAY_MYNETWORKS=0.0.0.0/0
+```
+
+a Dynamic DNS hostname can be resolved periodically.
 
 Example:
 
-Microsoft Exchange
-Dynamic Public IP
-       |
-       |
-       | Dynamic DNS
-       v
+```text
 mail.example.net
-       |
-       | A record lookup
-       v
+        |
+        | DNS lookup
+        v
 203.0.113.10
-       |
-       v
-SMTP Relay
-Instead of trusting all IPv4 clients with:
+        |
+        v
+203.0.113.10/32 OK
+        |
+        v
+Postfix SMTP relay
+```
 
-RELAY_MYNETWORKS=0.0.0.0/0
-the current address of an authorized client can be resolved from DNS and written to a Postfix CIDR access map.
+All other IPv4 addresses can then be rejected:
 
-Recommended Dynamic Client Security Model
-The Dynamic DNS filter is intended as an additional security layer.
+```text
+0.0.0.0/0 REJECT Client IP is not authorized
+```
 
-Recommended:
+It is recommended to combine Dynamic DNS client filtering with SASL authentication.
 
+The resulting security model is:
+
+```text
 Dynamic DNS IP match
         +
 SASL authentication
         +
-TLS
-Example:
+SMTP relay authorization
+```
 
-mail.example.net
-       |
-       | DNS lookup
-       v
-203.0.113.10
-       |
-       v
-203.0.113.10/32 OK
-       |
-       v
-SASL authentication
-       |
-       v
-Postfix relay
-Other IPv4 addresses can be rejected:
+Dynamic DNS client filtering does **not** replace SASL authentication.
 
-0.0.0.0/0 REJECT Client IP is not authorized
-Dynamic DNS based filtering does not replace SASL authentication.
+### Dynamic DNS Environment Variables
 
-External Script Support
-External relay extensions can be mounted under:
+Enable the feature using:
 
-/external-scripts
-and enabled using:
-
-RELAY_EXTERNAL_SCRIPT
-Example:
-
--v /local/scripts:/external-scripts:ro
--e "RELAY_EXTERNAL_SCRIPT=/external-scripts/dynamic-client.sh"
-The script remains outside the Docker image.
-
-This makes it possible to modify or replace the updater script without rebuilding the image.
-
-When RELAY_EXTERNAL_SCRIPT is not defined, the external script functionality is disabled and normal relay operation continues without Dynamic DNS client filtering.
-
-External Script Interface
-The configured external script must support two modes:
-
---init
---loop
---init
-Called once during container startup.
-
-It must create the initial client access map before normal operation starts.
-
-Example:
-
-/external-scripts/dynamic-client.sh --init
---loop
-Started by Supervisor after initialization.
-
-Example:
-
-/external-scripts/dynamic-client.sh --loop
-The loop periodically checks DNS and updates the client map when required.
-
-Dynamic DNS Environment Variables
-Variable	Default	Description
-RELAY_EXTERNAL_SCRIPT	empty	Path to the optional external updater
-RELAY_DYNAMIC_CLIENT	empty	DNS hostname representing the authorized SMTP client
-RELAY_DYNAMIC_CLIENT_INTERVAL	60	DNS check interval in seconds
-RELAY_DYNAMIC_CLIENT_MAP	/data/dynamic-client.cidr	Persistent Postfix CIDR map
-Example:
-
+```bash
 -e "RELAY_EXTERNAL_SCRIPT=/external-scripts/dynamic-client.sh"
 -e "RELAY_DYNAMIC_CLIENT=mail.example.net"
 -e "RELAY_DYNAMIC_CLIENT_INTERVAL=60"
 -e "RELAY_DYNAMIC_CLIENT_MAP=/data/dynamic-client.cidr"
-Dynamic DNS CIDR Map
-The generated CIDR map is stored persistently.
+```
+
+The recommended trusted network configuration in this scenario is:
+
+```bash
+-e "RELAY_MYNETWORKS=127.0.0.0/8"
+```
+
+The dynamic client IP should not be added to `RELAY_MYNETWORKS`.
+
+Instead, Postfix uses a dedicated client access map.
+
+### External Script
+
+The Dynamic DNS update script is intentionally stored outside the Docker image.
+
+Example host path:
+
+```text
+/DockerConfigs/mailrelay/scripts/dynamic-client.sh
+```
+
+Mount it read-only:
+
+```bash
+-v /DockerConfigs/mailrelay/scripts:/external-scripts:ro
+```
+
+Make the script executable:
+
+```bash
+chmod 755 /DockerConfigs/mailrelay/scripts/dynamic-client.sh
+```
+
+This design allows the Dynamic DNS logic to be modified without rebuilding the Docker image.
+
+When `RELAY_EXTERNAL_SCRIPT` is not defined, the external script functionality is disabled.
+
+### External Script Interface
+
+An external script must support:
+
+```text
+--init
+--loop
+```
+
+`--init` is executed when the container starts:
+
+```bash
+/external-scripts/dynamic-client.sh --init
+```
+
+It creates the initial Dynamic DNS CIDR map.
+
+`--loop` is managed by Supervisor:
+
+```bash
+/external-scripts/dynamic-client.sh --loop
+```
+
+The loop checks the DNS hostname periodically.
+
+### Generated CIDR Map
+
+The generated map is stored in the persistent `/data` volume.
 
 Default:
 
+```text
 /data/dynamic-client.cidr
+```
+
 Example:
 
+```text
 # Automatically generated. Do not edit.
 # Source: mail.example.net
 # Updated: 2026-11-14T10:23:29Z
 203.0.113.10/32 OK
 0.0.0.0/0 REJECT Client IP is not authorized
-Postfix uses the map through:
+```
 
-smtpd_client_restrictions =
-    check_client_access cidr:/data/dynamic-client.cidr
-Verify the active configuration:
+Postfix automatically uses:
 
-docker exec smtp-relay \
-  postconf smtpd_client_restrictions
-Expected:
-
+```text
 smtpd_client_restrictions = check_client_access cidr:/data/dynamic-client.cidr
-Postfix CIDR tables evaluate network patterns in order and use the result associated with the first matching pattern.
+```
 
-Dynamic DNS Update Behavior
-The updater periodically resolves:
+You can verify this with:
 
-RELAY_DYNAMIC_CLIENT
-For example:
+```bash
+docker exec smtp-relay postconf smtpd_client_restrictions
+```
 
-mail.example.net
-IP has not changed
+Expected:
+
+```text
+smtpd_client_restrictions = check_client_access cidr:/data/dynamic-client.cidr
+```
+
+### Dynamic DNS Update Behaviour
+
+The updater checks the configured DNS hostname periodically.
+
+If the IP does not change:
+
+```text
 DNS lookup
-   |
-same IPv4
-   |
-no configuration change
-No unnecessary Postfix reload is performed.
+    |
+same IP
+    |
+no action
+```
 
-IP has changed
+If the IP changes:
+
+```text
 DNS lookup
-   |
-new IPv4
-   |
-update dynamic-client.cidr
-   |
+    |
+new IP
+    |
+update CIDR map
+    |
 postfix check
-   |
+    |
 postfix reload
-The new address becomes active automatically.
+```
 
-DNS lookup fails
-If an existing CIDR map is available, it is retained.
+Postfix is only reloaded when required.
 
-DNS failure
-   |
-   v
-keep previous CIDR map
-The previous client address is therefore not removed simply because of a temporary DNS outage.
+If DNS resolution temporarily fails and an existing map is already available, the existing map is retained.
 
-Supervisor Integration
-The external updater is managed by Supervisor.
+### Verify Dynamic DNS Resolution
 
-Its generated configuration is stored under:
+Check DNS inside the container:
 
-/etc/supervisor.d/
-The main Supervisor configuration loads dynamic definitions using:
+```bash
+docker exec smtp-relay getent ahostsv4 mail.example.net
+```
 
-[include]
-files = /etc/supervisor.d/*.ini
-When the Dynamic DNS functionality is enabled, the container creates a program similar to:
+Check the currently generated access map:
 
-[program:external-relay-script]
-command=/external-scripts/dynamic-client.sh --loop
-priority=20
-autostart=true
-autorestart=true
-startsecs=2
-startretries=5
-stopsignal=TERM
-stopwaitsecs=10
-redirect_stderr=true
-stdout_logfile=/dev/fd/1
-stdout_logfile_maxbytes=0
-Check the processes:
+```bash
+docker exec smtp-relay cat /data/dynamic-client.cidr
+```
 
-docker exec smtp-relay supervisorctl status
+### Test the CIDR Map
+
+Test the authorized IP:
+
+```bash
+docker exec smtp-relay \
+  postmap -q 203.0.113.10 cidr:/data/dynamic-client.cidr
+```
+
 Expected:
 
-external-relay-script   RUNNING
-postfix                 RUNNING
-rsyslogd                RUNNING
-Dynamic DNS Logging
-Updater messages are available through normal Docker logs.
-
-docker logs smtp-relay 2>&1 | grep dynamic-client
-Example:
-
-[dynamic-client] Updater started.
-[dynamic-client] DNS name: mail.example.net
-[dynamic-client] Interval: 60s
-[dynamic-client] CIDR map: /data/dynamic-client.cidr
-After an address change:
-
-[dynamic-client] Client IP updated: mail.example.net -> 203.0.113.20
-[dynamic-client] Postfix reloaded.
-Testing Dynamic DNS Filtering
-Check DNS resolution
-docker exec smtp-relay \
-  getent ahostsv4 mail.example.net
-Example:
-
-203.0.113.10 STREAM mail.example.net
-203.0.113.10 DGRAM  mail.example.net
-Show the generated CIDR map
-docker exec smtp-relay \
-  cat /data/dynamic-client.cidr
-Example:
-
-203.0.113.10/32 OK
-0.0.0.0/0 REJECT Client IP is not authorized
-Test an allowed address
-docker exec smtp-relay \
-  postmap -q 203.0.113.10 \
-  cidr:/data/dynamic-client.cidr
-Expected:
-
+```text
 OK
-Test an unauthorized address
+```
+
+Test an unauthorized IP:
+
+```bash
 docker exec smtp-relay \
-  postmap -q 8.8.8.8 \
-  cidr:/data/dynamic-client.cidr
+  postmap -q 8.8.8.8 cidr:/data/dynamic-client.cidr
+```
+
 Expected:
 
+```text
 REJECT Client IP is not authorized
-Health Check
-The container contains a TCP based SMTP health check.
+```
 
-Default configuration:
+### Supervisor Integration
 
-interval:     10s
-timeout:      3s
-start-period: 10s
-retries:      3
-Repeated entries such as:
+The Dynamic DNS updater is managed by Supervisor.
 
-connect from localhost[127.0.0.1]
-lost connection after CONNECT from localhost[127.0.0.1]
-can therefore appear in the Postfix logs.
+Check its status:
 
-These connections are normally generated by the Docker health check.
+```bash
+docker exec smtp-relay supervisorctl status
+```
 
-Check container health:
+A Dynamic DNS enabled relay should show something similar to:
 
-docker inspect \
-  --format='{{json .State.Health}}' \
-  smtp-relay
-Installation
-Docker Hub
-docker pull joedafoe/docker-smtp-relay:latest
-Build Manually
-git clone https://github.com/JoeDafoe/docker-smtp-relay.git
-cd docker-smtp-relay
+```text
+external-relay-script    RUNNING
+postfix                  RUNNING
+rsyslogd                 RUNNING
+```
 
-docker build \
-  -t joedafoe/docker-smtp-relay:latest \
-  .
-Basic Usage
-docker run \
+Supervisor loads dynamically generated definitions from:
+
+```text
+/etc/supervisor.d/*.ini
+```
+
+### Dynamic DNS Logs
+
+Ch*ck the updater:
+
+```bash
+docker lo*s --since 10m smtp-relay 2>&1 | gr*p dynamic-client
+```
+
+Example:
+
+``*text
+[dynamic-client] Updater star*ed.
+[dynamic-client] DNS name: mai*.example.net
+[dynamic-client] Inte*val: 60s
+[dynamic-client] CIDR map* /data/dynamic-client.cidr
+```
+
+Af*er an IP change:
+
+```text
+[dynamic-client] Client IP updated: mail.ex*mple.net -> 203.0.113.20
+[dynamic-client] Postfix reloaded.
+```
+
+## I*stallation
+
+* Manual
+
+```bash
+git *lone https://github.com/JoeDafoe/docker-smtp-relay.git
+cd docker-smtp*relay
+./build.sh
+```
+
+Alternativel*:
+
+```bash
+docker build -t joedafo*/docker-smtp-relay:latest .
+```
+
+**Automatic
+
+```bash
+docker pull joe*afoe/docker-smtp-relay:latest
+```
+*## Usage
+
+Basic example:
+
+```bash
+*ocker run \
   --name smtp-relay \
-  -d \
+* -d \
   --restart=always \
-  -p 25:25 \
-  -e "RELAY_MYDOMAIN=domain.com" \
+  -p 25*25 \
+  -e "RELAY_MYDOMAIN=domain.c*m" \
   -e "RELAY_HOST=relay:25" \
-  joedafoe/docker-smtp-relay:latest
-Complete Dynamic DNS Example
-Create directories:
+* joedafoe/docker-smtp-relay:latest*```
 
-mkdir -p /DockerConfigs/mailrelay/data
-mkdir -p /DockerConfigs/mailrelay/postfix
-mkdir -p /DockerConfigs/mailrelay/scripts
-Place the updater at:
+### Dynamic DNS protected Int*rnet relay
 
-/DockerConfigs/mailrelay/scripts/dynamic-client.sh
-Make it executable:
+Example for an authent*cated mail server with a dynamic p*blic IP:
 
-chmod 755 \
-  /DockerConfigs/mailrelay/scripts/dynamic-client.sh
-Example deployment:
-
+```bash
 docker run \
-  --name mailrelay \
+  -*name mailrelay \
   -d \
-  --restart=always \
+  --restar*=always \
   -p 587:25 \
-  -v /DockerConfigs/mailrelay/data:/data \
-  -v /DockerConfigs/mailrelay/postfix:/var/spool/postfix \
-  -v /DockerConfigs/mailrelay/scripts:/external-scripts:ro \
-  -e "RELAY_POSTMASTER=administrator@example.net" \
-  -e "RELAY_MYHOSTNAME=relay.example.net" \
-  -e "RELAY_MYDOMAIN=example.net" \
-  -e "RELAY_HOST=upstream-relay.example.net:25" \
-  -e "RELAY_MYNETWORKS=127.0.0.0/8" \
-  -e "RELAY_MODE=ALLOW_SASLAUTH_NODOMAIN" \
-  -e "RELAY_USE_TLS=yes" \
-  -e "RELAY_EXTERNAL_SCRIPT=/external-scripts/dynamic-client.sh" \
-  -e "RELAY_DYNAMIC_CLIENT=mail.example.net" \
-  -e "RELAY_DYNAMIC_CLIENT_INTERVAL=60" \
-  -e "RELAY_DYNAMIC_CLIENT_MAP=/data/dynamic-client.cidr" \
-  -e "POSTCONF_compatibility_level=3.6" \
-  -e "POSTCONF_smtp_tls_security_level=encrypt" \
-  joedafoe/docker-smtp-relay:latest
-Verify a Running Deployment
-Container
-docker ps
-DNS
-docker exec mailrelay \
-  getent ahostsv4 mail.example.net
-Dynamic Client Map
-docker exec mailrelay \
-  cat /data/dynamic-client.cidr
-Postfix Client Restrictions
-docker exec mailrelay \
-  postconf smtpd_client_restrictions
-Expected:
+  -v /Dock*rConfigs/mailrelay/data:/data \
+  *v /DockerConfigs/mailrelay/postfix*/var/spool/postfix \
+  -v /DockerC*nfigs/mailrelay/scripts:/external-*cripts:ro \
+  -e "RELAY_POSTMASTER*administrator@example.net" \
+  -e *RELAY_MYHOSTNAME=relay.example.net* \
+  -e "RELAY_MYDOMAIN=example.ne*" \
+  -e "RELAY_HOST=upstream-rela*.example.net:25" \
+  -e "RELAY_MYN*TWORKS=127.0.0.0/8" \
+  -e "RELAY_*ODE=ALLOW_SASLAUTH_NODOMAIN" \
+  -* "RELAY_USE_TLS=yes" \
+  -e "RELAY*EXTERNAL_SCRIPT=/external-scripts/*ynamic-client.sh" \
+  -e "RELAY_DY*AMIC_CLIENT=mail.example.net" \
+  *e "RELAY_DYNAMIC_CLIENT_INTERVAL=6*" \
+  -e "RELAY_DYNAMIC_CLIENT_MAP*/data/dynamic-client.cidr" \
+  -e *POSTCONF_compatibility_level=3.6" *
+  -e "POSTCONF_smtp_tls_security_*evel=encrypt" \
+  joedafoe/docker-*mtp-relay:latest
+```
 
-smtpd_client_restrictions =
-check_client_access cidr:/data/dynamic-client.cidr
-Trusted Networks
-docker exec mailrelay postconf mynetworks
-Recommended for this deployment model:
+### Docker-c*mpose Specific configuration examp*es
 
-mynetworks = 127.0.0.0/8
-Upstream TLS
-docker exec mailrelay \
-  postconf smtp_tls_security_level
-Expected when TLS is required:
+* unauthenticated SMTP relay f*ltered by subnet and domain name
 
-smtp_tls_security_level = encrypt
-Supervisor
-docker exec mailrelay \
-  supervisorctl status
-Expected:
-
-external-relay-script   RUNNING
-postfix                 RUNNING
-rsyslogd                RUNNING
-Docker Compose Examples
-Subnet Restricted SMTP Relay
+*``yaml
 services:
   smtp-relay:
-    image: joedafoe/docker-smtp-relay:latest
-    restart: always
-
+   *image: joedafoe/docker-smtp-relay:*atest
     environment:
-      RELAY_POSTMASTER: 'postmaster@example.net'
-      RELAY_MYHOSTNAME: 'smtp-relay.example.net'
-      RELAY_MYDOMAIN: 'example.net'
-      RELAY_MYNETWORKS: '127.0.0.0/8 10.0.0.0/24'
-      RELAY_HOST: '[10.1.0.1]:25'
-
-    ports:
+      RELAY*POSTMASTER: 'postmaster@example.ne*'
+      RELAY_MYHOSTNAME: 'smtp-re*ay.example.net'
+      RELAY_MYDOMA*N: 'example.net'
+      RELAY_MYNET*ORKS: '127.0.0.0/8 10.0.0.0/24'
+  *   RELAY_HOST: '[10.1.0.1]:25'
+   *ports:
       - "10.0.0.1:3000:25"
-Authenticated SMTP Relay
+*``
+
+* authenticated SMTP proxy
+
+``*yaml
 services:
   smtp-relay-auth:
-    image: joedafoe/docker-smtp-relay:latest
-    restart: always
-
+*   image: joedafoe/docker-smtp-rel*y:latest
     environment:
-      RELAY_POSTMASTER: 'postmaster@example.net'
-      RELAY_MYHOSTNAME: 'smtp-relay.example.net'
-      RELAY_MYDOMAIN: 'example.net'
-      RELAY_MYNETWORKS: '127.0.0.0/8'
-      RELAY_HOST: '[10.1.0.1]:25'
-      RELAY_MODE: 'ALLOW_SASLAUTH_NODOMAIN'
-      RELAY_USE_TLS: 'yes'
-      POSTCONF_compatibility_level: '3.6'
-      POSTCONF_smtp_tls_security_level: 'encrypt'
-
+      RE*AY_POSTMASTER: 'postmaster@example*net'
+      RELAY_MYHOSTNAME: 'smtp*relay.example.net'
+      RELAY_MYD*MAIN: 'example.net'
+      RELAY_MY*ETWORKS: '127.0.0.0/8 10.0.0.0/24'*      RELAY_HOST: '[10.1.0.1]:25'
+*     RELAY_MODE: 'ALLOW_SASLAUTH_N*DOMAIN'
+      RELAY_LOGIN: 'sasl-u*er-login'
+      RELAY_PASSWORD: 'x*xxxxxxxxxx'
+      RELAY_USE_TLS: '*o'
+      POSTCONF_compatibility_le*el: '3.6'
     ports:
-      - "587:25"
-
+      - "10.0*0.1:3000:25"
     volumes:
-      - data-smtp-relay-auth:/data
-      - data-smtp-relay-queue:/var/spool/postfix
+      - *ata-smtp-relay-auth:/data
+      - *ata-smtp-relay-queue:/var/spool/po*tfix
 
 volumes:
-  data-smtp-relay-auth:
+  data-smtp-relay-a*th:
   data-smtp-relay-queue:
-Dynamic DNS Protected Relay
+```
+
+*## Using external relay credential*
+
+If you want to prevent having yo*r upstream relay credentials in yo*r `docker-compose.yml`, mount them*instead of setting `RELAY_LOGIN` a*d `RELAY_PASSWORD`.
+
+Mount the cre*entials file to:
+
+```text
+/etc/pos*fix/sasl_passwd
+```
+
+Example:
+
+```*aml
 services:
-  smtp-relay:
-    image: joedafoe/docker-smtp-relay:latest
-    restart: always
-
-    ports:
-      - "587:25"
-
+  smtp-relay-auth:
+ *  image: joedafoe/docker-smtp-rela*:latest
     environment:
-      RELAY_POSTMASTER: 'postmaster@example.net'
-      RELAY_MYHOSTNAME: 'relay.example.net'
-      RELAY_MYDOMAIN: 'example.net'
-
-      RELAY_MYNETWORKS: '127.0.0.0/8'
-      RELAY_MODE: 'ALLOW_SASLAUTH_NODOMAIN'
-
-      RELAY_HOST: 'upstream-relay.example.net:25'
-      RELAY_USE_TLS: 'yes'
-
-      RELAY_EXTERNAL_SCRIPT: '/external-scripts/dynamic-client.sh'
-      RELAY_DYNAMIC_CLIENT: 'mail.example.net'
-      RELAY_DYNAMIC_CLIENT_INTERVAL: '60'
-      RELAY_DYNAMIC_CLIENT_MAP: '/data/dynamic-client.cidr'
-
-      POSTCONF_compatibility_level: '3.6'
-      POSTCONF_smtp_tls_security_level: 'encrypt'
-
+      REL*Y_POSTMASTER: 'postmaster@example.*et'
+      RELAY_MYHOSTNAME: 'smtp-*elay.example.net'
+      RELAY_MYDO*AIN: 'example.net'
+      RELAY_MYN*TWORKS: '127.0.0.0/8 10.0.0.0/24'
+*     RELAY_HOST: '[10.1.0.1]:25'
+ *    RELAY_MODE: 'ALLOW_SASLAUTH_NO*OMAIN'
+      RELAY_USE_TLS: 'no'
+ *    POSTCONF_compatibility_level: *3.6'
+    ports:
+      - "10.0.0.1:*000:25"
     volumes:
-      - /DockerConfigs/mailrelay/data:/data
-      - /DockerConfigs/mailrelay/postfix:/var/spool/postfix
-      - /DockerConfigs/mailrelay/scripts:/external-scripts:ro
-Incoming STARTTLS
-Incoming STARTTLS protects authentication and SMTP traffic between an SMTP client and this relay.
+      - data-*mtp-relay-auth:/data
+      - "/my/*ocal/path/sasl_passwd:/etc/postfix*sasl_passwd:ro"
 
-Relevant Postfix parameters are:
+volumes:
+  data-s*tp-relay-auth:
+```
 
+Example conten*s:
+
+```text
+[10.1.0.1]:25 sasl-use*-login:xxxxxxxxxxxx
+```
+
+## Config*ration during runtime
+
+* List all *ASL users:
+
+```bash
+docker exec sm*p-relay /opt/listpasswd.sh
+```
+
+* *dd a SASL user:
+
+```bash
+docker ex*c -it smtp-relay \
+  /opt/saslpass*d.sh \
+  -u domain.com \
+  -c user*ame
+```
+
+Replace `domain.com` with*your relay domain.
+
+You will be pr*mpted for the password.
+
+* Add mul*iple SASL users:
+
+Mount a credenti*ls list to:
+
+```text
+/etc/postfix/*lient_sasl_passwd
+```
+
+Each line u*es:
+
+```text
+USERNAME PASSWORD
+```*
+Example:
+
+```text
+application1 Pa*swordExample1
+application2 Passwor*Example2
+```
+
+Check the Docker log* to ensure all entries were regist*red successfully.
+
+## Incoming STARTTLS
+
+Incoming STARTTLS can protect SMTP authentication between the SMTP client and this relay.
+
+The relevant Postfix settings are:
+
+```text
 smtpd_tls_security_level = may
 smtpd_tls_auth_only = yes
 smtpd_tls_cert_file = /cert/fullchain.pem
 smtpd_tls_key_file = /cert/privkey.pem
-They can be supplied through POSTCONF_*:
+```
 
+These can be configured using `POSTCONF_*`:
+
+```bash
 -e "POSTCONF_smtpd_tls_security_level=may"
 -e "POSTCONF_smtpd_tls_auth_only=yes"
 -e "POSTCONF_smtpd_tls_cert_file=/cert/fullchain.pem"
 -e "POSTCONF_smtpd_tls_key_file=/cert/privkey.pem"
+```
+
 Mount the certificate read-only:
 
+```bash
 -v /local/cert:/cert:ro
-For SMTP AUTH exposed to the Internet, preventing authentication before TLS is strongly recommended:
+```
 
+For Internet-facing SMTP AUTH, preventing authentication before TLS is strongly recommended:
+
+```text
 smtpd_tls_auth_only = yes
-Troubleshooting
-Effective Postfix Configuration
+```
+
+## Troubleshooting
+
+### Show effective Postfix configuration
+
+```bash
 docker exec smtp-relay postconf -n
-Mail Flow Logs
+```
+
+### Show Docker logs
+
+```bash
+docker logs --since 10m smtp-relay
+```
+
+### Check mail flow
+
+```bash
 docker logs --since 5m smtp-relay 2>&1 \
   | grep -E 'sasl_|status=|reject|REJECT|dynamic-client'
-Successful SASL authentication may appear as:
+```
 
+Successful SASL authentication can look like:
+
+```text
 sasl_method=LOGIN
 sasl_username=user@example.net
-Successful upstream TLS delivery may appear as:
+```
 
+Successful TLS delivery to an upstream relay can look like:
+
+```text
 tls=encrypt
 dsn=2.0.0
 status=sent
-Dynamic DNS Logs
-docker logs --since 10m smtp-relay 2>&1 \
-  | grep dynamic-client
-SMTP Listener
+```
+
+### Check Dynamic DNS
+
+```bash
 docker exec smtp-relay \
-  nc -z -w 2 127.0.0.1 25
-Test SMTP from Inside the Container
+  getent ahostsv4 mail.example.net
+```
+
+### Check Dynamic Client map
+
+```bash
+docker exec smtp-relay \
+  cat /data/dynamic-client.cidr
+```
+
+### Check Postfix client restrictions
+
+```bash
+docker exec smtp-relay \
+  postconf smtpd_client_restrictions
+```
+
+### Check Supervisor
+
+```bash
+docker exec smtp-relay supervisorctl status
+```
+
+### Check container health
+
+```bash
+docker inspect \
+  --format='{{json .State.Health}}' \
+  smtp-relay
+```
+
+### Test SMTP
+
+A simple SMTP client is embedded in the image:
+
+```bash
 docker exec -it smtp-relay \
   /opt/smtp_client.py \
   -s test \
   -f noreply@domain.com \
   --user user1:password1 \
   admin@domain.com
-Security Recommendations
-For Internet-facing relays:
+```
 
-Do not use RELAY_MYNETWORKS=0.0.0.0/0 as a general trust mechanism.
-Prefer SASL authentication for external SMTP clients.
-Use Dynamic DNS filtering as an additional security layer when the authorized client has a dynamic public IP.
-Keep RELAY_MYNETWORKS limited to systems and networks that should actually be trusted.
-Require TLS when sending to a known upstream smart host when supported:
+## Security recommendations
+
+For SMTP relays exposed to the Internet:
+
+* Do not use `RELAY_MYNETWORKS=0.0.0.0/0` as a general trust mechanism.
+* Prefer SASL authentication for external SMTP clients.
+* Use Dynamic DNS client filtering as an additional security layer when the authorized server has a dynamic public IP.
+* Keep `RELAY_MYNETWORKS` limited to networks that should actually be trusted.
+* Require TLS to a known upstream smart host where supported:
+
+```text
 smtp_tls_security_level = encrypt
-Enable STARTTLS for Internet-facing incoming SMTP authentication.
-Prevent SMTP AUTH before TLS:
+```
+
+* Enable incoming STARTTLS when SMTP AUTH is used over the Internet.
+* Prevent unencrypted SMTP authentication:
+
+```text
 smtpd_tls_auth_only = yes
-Use long and unique SASL credentials.
-Protect the /data volume because it contains SASL authentication data.
-Monitor Postfix logs for failed authentication and unauthorized client attempts.
-Mount external scripts read-only:
-/external-scripts:ro
-Keep the Dynamic DNS CIDR map on persistent storage.
+```
+
+* Use long and unique SASL passwords.
+* Protect the persistent `/data` volume because it contains SASL authentication data.
+* Mount external scripts read-only.
+* Monitor Postfix logs for failed SASL authentication and rejected clients.
+
+## Todo
+
+* Improve SMTP application-level health check
+* Add Prometheus exporters:
+  * [rsyslog_exporter](https://github.com/engage-ehs/rsyslog_exporter)
+  * [postfix_exporter](https://github.com/kumina/postfix_exporter)
+* Add automated tests for Dynamic DNS updates
+* Add IPv6 support to the Dynamic DNS client filter
+* Extend incoming STARTTLS examples
